@@ -110,8 +110,15 @@ Use summary() to view the model output and statistics.
 
 # a. Saturated model: 
 
+homes_lm1 <- lm(Price ~ City + Bedrooms + Bathrooms + SqFt + PricePerSqFt + Status, data = homes_sub)
+
+#Including PricePerSqFt in the model makes no sense, since it is calculated from Price, the dependent variable!! This can lead to biased overfitting of model results
+
+#Model doesn't make sense, look at the coefficients! Bedrooms, bathrooms, and SqFt are all telling me about house size - pick one! SqFt is probably the most representative one to include. Could also try to aggregate into a single option
 
 # b. Model summary:
+
+summary(homes_lm1)
 
 ```
 
@@ -121,7 +128,16 @@ The next model: Exclude price per square foot, and bedrooms/bathrooms (since the
 
 # a. Updated model with variables City, SqFt, and Status:
 
+homes_lm2 <- lm(Price ~ City + SqFt + Status, data = homes_sub)
+
+homes_lm2
+
+#If sq ft and status are the same, we would expect a house in SLO on average to be about $35,000 more than a house in Arroyo Grande.
+#This model makes sense! Price per square foot comes out about right, so do other coefficients.
+
 # b. Model summary:
+
+summary(homes_lm2)
 
 ```
 
@@ -131,19 +147,25 @@ Wait...but what if I wanted everything to be with respect to a Regular sale stat
 
 # a. Set Status to class 'factor'
 
+homes_sub$Status <- factor(homes_sub$Status)
 
 # b. Check to ensure it's a factor now
 
+#Use class() to check!
 
 # c. Check levels:
 
+levels(homes_sub$Status)
 
 # d. Reassign reference level of "Status" to "Regular":
 
+homes_sub$Status <- fct_relevel(homes_sub$Status, "Regular")
 
 # e. Now run the regression again - same equation, but now the reference level is different (Status = Regular): 
 
+homes_lm3 <- lm(Price ~ City + SqFt + Status, data = homes_sub)
 
+summary(homes_lm3)
 
 ```
 
@@ -160,6 +182,10 @@ Then we can evaluate model diagnostics using the plot() function:
 
 # a. Model diagnostics:
 
+plot(homes_lm3)
+
+#Overall, heteroscedasticity is OK, residuals normality definitely looks good, and conceptually and mathematically my model is making sense!
+
 ```
 
 ###6. Model comparison by Akaike Information Criterion
@@ -170,7 +196,11 @@ The AIC is a quantitative metric for model "optimization" that balances complexi
 
 # a. AIC values for each model
 
+sat_aic <- AIC(homes_lm1)
+final_aic <- AIC(homes_lm3)
+
 # Answer: which would you pick? 
+# I would still pick homes_lm3, because of #Overall, heteroscedasticity is OK, residuals normality definitely looks good, and conceptually and mathematically my model is making sense!
 
 ```
 
@@ -180,7 +210,9 @@ The AIC is a quantitative metric for model "optimization" that balances complexi
 
 # a. Prepare a nice regression table:
 
+lm_table <- stargazer(homes_lm1, homes_lm3, type = "html")
 
+lm_table
 
 # Note: If you want to work with this in Word, save to html, open, copy and paste into Word. 
 
@@ -232,9 +264,14 @@ Make predictions for the new data using predict():
 
 # a. Make predictions using the new data frame:
 
+price_predict <- predict(homes_lm3,
+                         newdata = df_new,
+                         se.fit = TRUE,
+                         interval = "confidence")
+
 # b. Bind predictions to the data to make it actually useful:
 
-
+predict_df <- data.frame(df_new, price_predict)
 
 ```
 
@@ -244,6 +281,11 @@ Then visualize it!
 
 # Create a line graph with square footage on the x-axis, predicted price on y-axis, with color dependent on City and facet_wrapped by sale status (follow along):
 
+predict_graph <- ggplot(predict_df, aes(x = SqFt, y = fit.fit)) +
+  geom_line(aes(color = City)) +
+  facet_wrap(~ Status)
+
+predict_graph
 
 ```
 
